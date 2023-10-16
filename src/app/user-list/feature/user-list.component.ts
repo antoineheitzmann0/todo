@@ -1,4 +1,4 @@
-import { Component, ViewChild, computed, inject, Signal } from '@angular/core';
+import { Component, ViewChild, computed, inject, Signal, ChangeDetectionStrategy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { UserListService } from '../data-access/user-list.service';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
@@ -18,6 +18,7 @@ import { User } from 'src/app/shared/utils/user';
   ],
   templateUrl: './user-list.component.html',
   styleUrls: ['./user-list.component.scss'],
+  changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class UserListComponent {
   userListService = inject(UserListService);
@@ -35,7 +36,7 @@ export class UserListComponent {
 
   public ngAfterViewInit(): void {
     this.paginator.page
-      .pipe(startWith({ pageIndex: 1, pageSize: 5 }))
+      .pipe(startWith({ pageIndex: 0, pageSize: 5 }))
       .subscribe((data) => {
         this.userListService.getUsers(data.pageIndex + 1, data.pageSize);
       });
