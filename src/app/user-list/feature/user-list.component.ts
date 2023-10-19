@@ -51,14 +51,14 @@ export class UserListComponent {
   public ngAfterViewInit(): void {
     this.paginator.page
       .pipe(
-        takeUntilDestroyed(this.destroyRef),
         startWith({ pageIndex: 0, pageSize: 5 }),
         switchMap((data) =>
           this.userListService.getUsersUsingCache(
             data.pageIndex + 1,
             data.pageSize
           )
-        )
+        ),
+        takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((usersWithPagination) => {
         this.#usersWithPagination.set(usersWithPagination);
