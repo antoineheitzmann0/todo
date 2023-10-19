@@ -1,4 +1,6 @@
+import { HttpClient } from '@angular/common/http';
 import { Injectable, computed, signal } from '@angular/core';
+import { Observable, of, tap } from 'rxjs';
 import { UsersWithPagination } from 'src/app/shared/utils/user';
 @Injectable({
   providedIn: 'root',
@@ -6,27 +8,33 @@ import { UsersWithPagination } from 'src/app/shared/utils/user';
 
 export class UserListService {
 
-  private URL = 'https://reqres.in/api/users';
+  constructor(private http: HttpClient) { }
 
-  #usersWithPagination = signal({} as UsersWithPagination);
-  usersWithPaginationCacheArray = [] as UsersWithPagination[];
-  public users = computed(() => this.#usersWithPagination().data);
-  public totalData = computed(() => this.#usersWithPagination().total);
+  private URL = 'https://reqres.in/api/users';
+  private usersWithPaginationCacheArray : UsersWithPagination[] = [];
 
   public getUsers(
     page: number,
     pageSize: number
-  ) {
-    if (pageSize !== this.#usersWithPagination().per_page) this.usersWithPaginationCacheArray = [];
-    if (this.usersWithPaginationCacheArray[page]) {
-      this.#usersWithPagination.update(() => this.usersWithPaginationCacheArray[page]);
+  ): Observable<UsersWithPagination> {
+    return this.http.get<UsersWithPagination>(`${this.URL}?page=${page}&per_page=${pageSize}`);
+  }
+
+  public getUsersUsingCache(
+    page: number,
+    pageSize: number
+  ): Observable<UsersWithPagination> {
+    const cachedUsers = this.usersWithPaginationCacheArray.find(
+      (cachedUser) => cachedUser.page === page && cachedUser.per_page === pageSize
+    );
+    if (cachedUsers) {
+      return of(cachedUsers);
     } else {
-      fetch(`${this.URL}?page=${page}&per_page=${pageSize}`)
-        .then(response => response.json())
-        .then((data: UsersWithPagination) => {
-          this.#usersWithPagination.update(() => data);
-          this.usersWithPaginationCacheArray[page] = data;
-        });
+      return this.http.get<UsersWithPagination>(`${this.URL}?page=${page}&per_page=${pageSize}`).pipe(
+        tap((usersWithPagination) => {
+          this.usersWithPaginationCacheArray.push(usersWithPagination);
+        })
+      );
     }
   }
 }

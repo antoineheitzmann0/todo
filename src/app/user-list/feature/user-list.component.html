@@ -12,7 +12,7 @@
 <mat-progress-bar mode="indeterminate" *ngIf="isLoading()"></mat-progress-bar>
 <mat-paginator
   #paginator
-  [length]="userListService.totalData()"
+  [length]="totalData()"
   [pageSizeOptions]="pageSizes"
   showFirstLastButtons
 ></mat-paginator>
