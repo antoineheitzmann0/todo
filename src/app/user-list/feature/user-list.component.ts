@@ -1,6 +1,5 @@
 import {
   Component,
-  ViewChild,
   computed,
   inject,
   Signal,
@@ -12,8 +11,8 @@ import { CommonModule } from '@angular/common';
 import { UserListService } from '../data-access/user-list.service';
 import { MatTableDataSource, MatTableModule } from '@angular/material/table';
 import { MatProgressBarModule } from '@angular/material/progress-bar';
-import { MatPaginator, MatPaginatorModule } from '@angular/material/paginator';
-import { startWith, switchMap } from 'rxjs';
+import { MatPaginatorModule } from '@angular/material/paginator';
+import { BehaviorSubject, switchMap } from 'rxjs';
 import { User, UsersWithPagination } from 'src/app/shared/utils/user';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
@@ -33,10 +32,12 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 export class UserListComponent {
   userListService = inject(UserListService);
   destroyRef = inject(DestroyRef);
-  #usersWithPagination = signal({} as UsersWithPagination);
 
-  public users = computed(() => this.#usersWithPagination().data);
-  public totalData = computed(() => this.#usersWithPagination().total);
+  private pageData$ = new BehaviorSubject({ pageIndex: 1, pageSize: 5 });
+  private state = signal({} as UsersWithPagination);
+
+  public users = computed(() => this.state().data);
+  public totalData = computed(() => this.state().total);
   dataSource: Signal<MatTableDataSource<User>> = computed(
     () => new MatTableDataSource<User>(this.users())
   );
@@ -44,24 +45,29 @@ export class UserListComponent {
     return this.users() ? false : true;
   });
 
-  @ViewChild(MatPaginator) paginator!: MatPaginator;
   pageSizes: number[] = [5, 10, 25, 100];
   displayedColumns: string[] = ['id', 'email', 'first_name', 'last_name'];
 
-  public ngAfterViewInit(): void {
-    this.paginator.page
+  ngOnInit(): void {
+    this.pageData$
       .pipe(
-        startWith({ pageIndex: 0, pageSize: 5 }),
-        switchMap((data) =>
+        switchMap((pageData) =>
           this.userListService.getUsersUsingCache(
-            data.pageIndex + 1,
-            data.pageSize
+            pageData.pageIndex,
+            pageData.pageSize
           )
         ),
         takeUntilDestroyed(this.destroyRef)
       )
       .subscribe((usersWithPagination) => {
-        this.#usersWithPagination.set(usersWithPagination);
+        this.state.set(usersWithPagination);
       });
+  }
+
+  onPageChange(event: any) {
+    this.pageData$.next({
+      pageIndex: event.pageIndex + 1,
+      pageSize: event.pageSize,
+    });
   }
 }
